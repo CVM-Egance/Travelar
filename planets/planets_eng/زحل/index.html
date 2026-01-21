@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>كوكب الأرض | تجربة ثلاثية الأبعاد واقعية</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #000000;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #app {
+            width: 100%;
+            height: 100%;
+        }
+
+        #earth-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        #ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .loader {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px 40px;
+            border-radius: 12px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: opacity 0.5s ease;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid #00a2ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+    <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+    <div id="app">
+        <canvas id="earth-canvas"></canvas>
+
+        <!-- Planet Info Card -->
+        <div class="planet-card">
+            <h2>SATURN</h2>
+            <div class="card-content">
+                <div class="stat-item">
+                    <span class="stat-label">DIAMETER</span>
+                    <span class="stat-value">116,460 km</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">SUN DISTANCE</span>
+                    <span class="stat-value">1.4 B km</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">DAY LENGTH</span>
+                    <span class="stat-value">10h 42m</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">YEAR LENGTH</span>
+                    <span class="stat-value">29.5 years</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="ui-overlay">
+            <div class="loader" id="loader">
+                <div class="spinner"></div>
+                <p>Loading Planet...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- استيراد مكتبة Three.js و OrbitControls عبر CDN (نسخة UMD للعمل بدون خادم) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/controls/OrbitControls.js"></script>
+    <script src="../textures/embedded_textures.js"></script>
+
+    <script>
+        class EarthExperience {
+            constructor() {
+                this.canvas = document.querySelector('#earth-canvas');
+                this.loaderElement = document.getElementById('loader');
+                
+                this.scene = new THREE.Scene();
+                this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+                this.camera.position.z = 3.5;
+                
+                this.renderer = new THREE.WebGLRenderer({
+                    canvas: this.canvas,
+                    antialias: true,
+                    alpha: true
+                });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                
+                // التحكم في الكاميرا
+                this.controls = new THREE.OrbitControls(this.camera, this.canvas);
+                this.controls.enableDamping = true;
+                this.controls.dampingFactor = 0.05;
+                this.controls.minDistance = 1.5;
+                this.controls.maxDistance = 10;
+
+                this.textureLoader = new THREE.TextureLoader();
+                
+                this.addStars();
+                this.addLights();
+                this.createEarth();
+                this.animate();
+                
+                window.addEventListener('resize', () => this.onResize());
+            }
+
+            addStars() {
+                const starsGeometry = new THREE.BufferGeometry();
+                const count = 5000; // عدد نجوم متوسط لتبدو واقعية وبعيدة
+                const positions = new Float32Array(count * 3);
+                
+                for(let i = 0; i < count * 3; i++) {
+                    positions[i] = (Math.random() - 0.5) * 600; // مسافة بعيدة جداً
+                }
+                
+                starsGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                
+                // إنشاء تكستشر دائرة ناعمة
+                const canvas = document.createElement('canvas');
+                canvas.width = 32;
+                canvas.height = 32;
+                const context = canvas.getContext('2d');
+                const gradient = context.createRadialGradient(16, 16, 0, 16, 16, 16);
+                gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+                gradient.addColorStop(0.2, 'rgba(255, 255, 255, 0.8)');
+                gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.2)');
+                gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                context.fillStyle = gradient;
+                context.fillRect(0, 0, 32, 32);
+                
+                const starTexture = new THREE.CanvasTexture(canvas);
+
+                const starsMaterial = new THREE.PointsMaterial({
+                    map: starTexture,
+                    size: 0.7, // حجم النجم
+                    transparent: true,
+                    opacity: 0.9,
+                    sizeAttenuation: true,
+                    color: 0xffffff, // أبيض ناصع
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false
+                });
+                
+                const starField = new THREE.Points(starsGeometry, starsMaterial);
+                this.scene.add(starField);
+            }
+
+            addLights() {
+                // تخفيف حدة الشمس
+                const sunLight = new THREE.DirectionalLight(0xffffff, 1.2); 
+                sunLight.position.set(-5, 3, 5);
+                this.scene.add(sunLight);
+
+                // تفتيح المناطق المظلمة بشكل ملحوظ جداً
+                // لون أزرق سماوي فاتح قليلاً ليعطي إحساس ضوء النهار المنعكس أو ضوء القمر القوي
+                const ambientLight = new THREE.AmbientLight(0x404060, 2.5); 
+                this.scene.add(ambientLight);
+                
+                // إضاءة خلفية تكميلية لملء الظلال
+                const backLight = new THREE.DirectionalLight(0x222244, 1.0);
+                backLight.position.set(10, 0, -10);
+                this.scene.add(backLight);
+            }
+
+            createEarth() {
+                const geometry = new THREE.SphereGeometry(1, 64, 64);
+                
+                // زحل: عملاق غازي مع حلقات
+                const textures = {
+                    // رابط موثوق من ويكيميد
+                    day: SATURN_DATA
+                };
+
+                const material = new THREE.MeshPhongMaterial({
+                    map: null,
+                    color: 0xe0cda9, // لون بيج/ذهبي (Fallback)
+                    specular: new THREE.Color(0x111111), // لمعان خفيف جداً
+                    shininess: 5
+                });
+
+                this.earth = new THREE.Mesh(geometry, material);
+                this.earth.rotation.z = 0.46; 
+                this.scene.add(this.earth);
+
+                this.textureLoader.load(textures.day, (texture) => {
+                     this.earth.material.map = texture;
+                     this.earth.material.needsUpdate = true;
+                     this.loaderElement.style.opacity = '0'; // Fade out loader
+                     setTimeout(() => this.loaderElement.style.display = 'none', 500); // Hide after fade
+                }, undefined, (err) => {
+                    console.error('Texture load failed, using fallback color', err);
+                    this.loaderElement.style.opacity = '0'; // Fade out loader even on error
+                    setTimeout(() => this.loaderElement.style.display = 'none', 500); // Hide after fade
+                });
+
+                // تأكيد إخفاء اللودر
+                setTimeout(() => {
+                    if (this.loaderElement.style.display !== 'none') {
+                        this.loaderElement.style.opacity = '0';
+                        setTimeout(() => this.loaderElement.style.display = 'none', 500);
+                    }
+                }, 2000);
+
+                // *** إضافة الحلقات ***
+                const innerRadius = 1.4; // توسيع الحلقات قليلاً لتكون أوضح
+                const outerRadius = 2.12; // تقليل العرض إلى 60% من الأصل (كان 1.2 وعرضه الآن 0.72)
+                const ringGeometry = new THREE.RingGeometry(innerRadius, outerRadius, 128);
+                const pos = ringGeometry.attributes.position;
+                const uv = ringGeometry.attributes.uv;
+                const v3 = new THREE.Vector3();
+                for (let i = 0; i < pos.count; i++) {
+                    v3.fromBufferAttribute(pos, i);
+                    const radius = v3.length();
+                    // Map radius to U coordinate (0 to 1 across the ring width)
+                    const u = (radius - innerRadius) / (outerRadius - innerRadius);
+                    uv.setXY(i, u, 0.5);
+                }
+
+                const ringMaterial = new THREE.MeshPhongMaterial({
+                    map: this.createRingTexture(),
+                    color: 0xffffff, 
+                    side: THREE.DoubleSide,
+                    transparent: true,
+                    opacity: 0.9,
+                    specular: new THREE.Color(0x444444),
+                    shininess: 10
+                });
+                
+                const rings = new THREE.Mesh(ringGeometry, ringMaterial);
+                rings.rotation.x = Math.PI / 2; 
+                this.earth.add(rings); 
+
+                /* تم استبدال التحميل الخارجي بالتوليد البرمجي لضمان التفاصيل
+                 this.textureLoader.load(textures.rings, (texture) => { ... });
+                */
+                // زحل غلافه الجوي يشبه المشتري، غازي وكثيف
+                const atmosphereGeometry = new THREE.SphereGeometry(1.2, 64, 64); 
+                const atmosphereMaterial = new THREE.ShaderMaterial({
+                    transparent: true,
+                    side: THREE.BackSide,
+                    uniforms: {
+                        c: { type: "f", value: 0.3 }, 
+                        p: { type: "f", value: 4.5 }, 
+                        glowColor: { type: "c", value: new THREE.Color(0xeead6e) }, // لون ذهبي باهت
+                        viewVector: { type: "v3", value: this.camera.position }
+                    },
+                    vertexShader: `
+                        uniform vec3 viewVector;
+                        varying float intensity;
+                        void main() {
+                            vec3 vNormal = normalize( normalMatrix * normal );
+                            vec3 vNormel = normalize( normalMatrix * viewVector );
+                            intensity = pow( 0.5 - dot(vNormal, vNormel), 4.0 );
+                            gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+                        }
+                    `,
+                    fragmentShader: `
+                        uniform vec3 glowColor;
+                        varying float intensity;
+                        void main() {
+                            vec3 glow = glowColor * intensity;
+                            gl_FragColor = vec4( glow, 0.3 );
+                        }
+                    `
+                });
+                this.atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
+                this.scene.add(this.atmosphere);
+            }
+
+            onResize() {
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+
+            createRingTexture() {
+                const canvas = document.createElement('canvas');
+                canvas.width = 1024;
+                canvas.height = 1;
+                const context = canvas.getContext('2d');
+                
+                const gradient = context.createLinearGradient(0, 0, 1024, 0);
+                // تفاصيل الحلقات (فجوة كاسيني، الحلقة A و B)
+                gradient.addColorStop(0.0, 'rgba(0,0,0,0)'); // بداية شفافة
+                gradient.addColorStop(0.1, 'rgba(30,30,30,0.5)'); // الحلقة C (شفافة غامقة)
+                gradient.addColorStop(0.2, 'rgba(168, 149, 114, 0.9)'); // بداية الحلقة B
+                gradient.addColorStop(0.40, 'rgba(210, 190, 150, 1)'); // وسط الحلقة B (مضيء)
+                gradient.addColorStop(0.53, 'rgba(168, 149, 114, 1)'); // نهاية الحلقة B
+                gradient.addColorStop(0.54, 'rgba(0,0,0,0)'); // فجوة كاسيني (الشهيرة)
+                gradient.addColorStop(0.57, 'rgba(146, 128, 97, 1)'); // بداية الحلقة A
+                gradient.addColorStop(0.70, 'rgba(168, 149, 114, 1)'); // وسط الحلقة A
+                gradient.addColorStop(0.85, 'rgba(146, 128, 97, 0.8)'); // نهاية الحلقة A
+                gradient.addColorStop(1.0, 'rgba(0,0,0,0)'); // نهاية شفافة
+                
+                context.fillStyle = gradient;
+                context.fillRect(0, 0, 1024, 1);
+                
+                const texture = new THREE.CanvasTexture(canvas);
+                return texture;
+            }
+
+            animate() {
+                requestAnimationFrame(() => this.animate());
+                
+                if (this.earth) this.earth.rotation.y += 0.001;
+                if (this.clouds) this.clouds.rotation.y += 0.0015;
+                
+                this.controls.update();
+                this.renderer.render(this.scene, this.camera);
+            }
+        }
+
+        // تشغيل التجربة عند تحميل الصفحة
+        window.onload = () => {
+            new EarthExperience();
+        };
+    </script>
+</body>
+</html>
