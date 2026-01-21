@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>النظام الشمسي ثلاثي الأبعاد - Ultra-Realistic Solar System</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="ui-container">
+        <!-- Time Controller (Keep as requested) -->
+        <div class="controller-card">
+            <h2>التحكم في الوقت</h2>
+            <div class="warp-controls">
+                <button id="reverse-btn" title="عكس الوقت">◀◀</button>
+                <button id="pause-btn" title="إيقاف/تشغيل">❙❙</button>
+                <button id="play-btn" title="تشغيل عادي">▶</button>
+                <button id="forward-btn" title="تسريع">▶▶</button>
+            </div>
+            <div class="speed-selector">
+                <button class="speed-btn" data-speed="0.1">×0.1</button>
+                <button class="speed-btn" data-speed="0.5">×0.5</button>
+                <button class="speed-btn active" data-speed="1">×1</button>
+                <button class="speed-btn" data-speed="5">×5</button>
+                <button class="speed-btn" data-speed="10">×10</button>
+            </div>
+            <div class="status">
+                السرعة الحالية: <span id="current-speed">1x</span>
+            </div>
+        </div>
+
+        <!-- Planet Info Panel (NEW) -->
+        <div id="planet-info" class="info-card">
+            <button id="close-info">×</button>
+            <h1 id="planet-name">الأرض</h1>
+            <p id="planet-desc">كوكب الحياة والجمال.</p>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="label">القطر</span>
+                    <span class="value" id="planet-size">-</span>
+                </div>
+                <div class="stat-item">
+                    <span class="label">البعد عن الشمس</span>
+                    <span class="value" id="planet-dist">-</span>
+                </div>
+                <div class="stat-item">
+                    <span class="label">فترة الدوران</span>
+                    <span class="value" id="planet-period">-</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- تحميل المكتبات -->
+    <script src="./three/three.min.js"></script>
+    <script src="embedded_textures.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
