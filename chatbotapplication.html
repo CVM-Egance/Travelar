@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TRAVELER AI - Premium Chat</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.3.1/css/bootstrap.min.css"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+      :root {
+        --main-color: #b407f9;
+        --second-color: #6a0094;
+        --bg-glass: rgba(255, 255, 255, 0.7);
+        --bg-light: #f8f9fa;
+        --user-bubble: #b407f9;
+        --bot-bubble: #ffffff;
+        --text-color: #2b2b2b;
+        --sub-text: #666666;
+      }
+
+      body {
+        background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
+        height: 100vh;
+        height: 100dvh;
+        margin: 0;
+        font-family: 'Inter', sans-serif;
+        color: var(--text-color);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .header {
+        padding: 20px;
+        text-align: center;
+        background: rgba(255, 255, 255, 0.4);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+        z-index: 10;
+      }
+
+      .main-title {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 700;
+        letter-spacing: 2px;
+        color: var(--second-color);
+        text-shadow: 0 0 5px rgba(180, 7, 249, 0.2);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      #chat-container {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        scrollbar-width: thin;
+        scrollbar-color: var(--main-color) transparent;
+      }
+
+      #chat-container::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      #chat-container::-webkit-scrollbar-thumb {
+        background: var(--main-color);
+        border-radius: 10px;
+      }
+
+      .message {
+        max-width: 80%;
+        padding: 12px 18px;
+        border-radius: 20px;
+        font-size: 0.95rem;
+        line-height: 1.5;
+        position: relative;
+        animation: fadeIn 0.3s ease;
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .user-message {
+        align-self: flex-end;
+        background: var(--user-bubble);
+        color: white;
+        border-bottom-right-radius: 5px;
+        box-shadow: 0 4px 15px rgba(180, 7, 249, 0.15);
+      }
+
+      .bot-message {
+        align-self: flex-start;
+        background: var(--bot-bubble);
+        color: var(--text-color);
+        border-bottom-left-radius: 5px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+      }
+
+      .input-area {
+        padding: 20px;
+        background: rgba(255, 255, 255, 0.5);
+        backdrop-filter: blur(15px);
+        border-top: 1px solid rgba(255, 255, 255, 0.3);
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+
+      #userInput {
+        background: rgba(255, 255, 255, 0.8);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        border-radius: 25px;
+        color: #333;
+        padding: 12px 20px;
+        flex: 1;
+        transition: all 0.3s;
+      }
+
+      #userInput:focus {
+        background: #ffffff;
+        border-color: var(--main-color);
+        box-shadow: 0 0 10px rgba(180, 7, 249, 0.1);
+        outline: none;
+      }
+
+      #sendBtn {
+        background: var(--main-color);
+        border: none;
+        border-radius: 50%;
+        width: 45px;
+        height: 45px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: transform 0.2s, background 0.3s;
+        box-shadow: 0 4px 15px rgba(180, 7, 249, 0.3);
+      }
+
+      #sendBtn:hover {
+        background: var(--second-color);
+        transform: scale(1.05);
+      }
+
+      #sendBtn:active {
+        transform: scale(0.95);
+      }
+
+      .typing-indicator {
+        font-style: italic;
+        font-size: 0.8rem;
+        color: var(--sub-text);
+        margin-left: 20px;
+        margin-bottom: 10px;
+        display: none;
+      }
+      
+      /* Markdown basic styling for light mode */
+      .bot-message p { margin-bottom: 8px; }
+      .bot-message code { background: rgba(0,0,0,0.05); padding: 2px 4px; border-radius: 4px; color: #d63384; }
+      .bot-message pre { background: #f1f3f5; padding: 10px; border-radius: 8px; color: #333; overflow-x: auto; border: 1px solid #ddd; }
+
+      /* Responsive Adjustments */
+      @media (max-width: 768px) {
+        .header {
+          padding: 15px;
+        }
+        .main-title {
+          font-size: 1.25rem;
+        }
+        #chat-container {
+          padding: 15px;
+          gap: 12px;
+        }
+        .message {
+          max-width: 90%;
+          font-size: 0.9rem;
+          padding: 10px 15px;
+        }
+        .input-area {
+          padding: 15px;
+        }
+        #userInput {
+          padding: 10px 18px;
+        }
+        #sendBtn {
+          width: 40px;
+          height: 40px;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .header {
+          padding: 12px;
+        }
+        .main-title {
+          font-size: 1.1rem;
+        }
+        #chat-container {
+          padding: 10px;
+          gap: 10px;
+        }
+        .message {
+          max-width: 95%;
+          font-size: 0.85rem;
+        }
+        .input-area {
+          padding: 10px;
+          gap: 8px;
+        }
+        #sendBtn {
+          width: 38px;
+          height: 38px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h2 class="main-title">TRAVELER AI</h2>
+    </div>
+
+    <div id="chat-container">
+      <div class="message bot-message">مرحباً بك! أنا رفيقك في رحلة الفضاء. كيف يمكنني مساعدتك اليوم؟</div>
+    </div>
+
+    <div class="typing-indicator" id="typing">جاري معالجة طلبك...</div>
+
+    <div class="input-area">
+      <input
+        type="text"
+        id="userInput"
+        placeholder="اكتب سؤالك هنا..."
+        autocomplete="off"
+      />
+      <button id="sendBtn" onclick="sendMessage()">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="white">
+          <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
+        </svg>
+      </button>
+    </div>
+
+    <script>
+      const API_KEY = "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";
+      
+      // List of powerful free models for auto-fallback
+      const MODELS = [
+        "meta-llama/llama-3.3-70b-instruct:free",
+        "qwen/qwen-2.5-72b-instruct:free",
+        "deepseek/deepseek-chat:free",
+        "google/gemini-2.0-flash-exp:free"
+      ];
+
+      const chatContainer = document.getElementById("chat-container");
+      const userInput = document.getElementById("userInput");
+      const typingIndicator = document.getElementById("typing");
+
+      userInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") sendMessage();
+      });
+
+      function appendMessage(role, text) {
+        const msgDiv = document.createElement("div");
+        msgDiv.className = `message ${role}-message`;
+        
+        if (role === "bot") {
+          msgDiv.innerHTML = marked.parse(text);
+        } else {
+          msgDiv.textContent = text;
+        }
+        
+        chatContainer.appendChild(msgDiv);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+        return msgDiv;
+      }
+
+      async function sendMessage() {
+        const text = userInput.value.trim();
+        if (!text) return;
+
+        appendMessage("user", text);
+        userInput.value = "";
+        typingIndicator.style.display = "block";
+
+        let success = false;
+        
+        // Try models one by one if one fails
+        for (const model of MODELS) {
+          try {
+            console.log(`Trying model: ${model}`);
+            const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+              method: "POST",
+              headers: {
+                "Authorization": `Bearer ${API_KEY}`,
+                "HTTP-Referer": "https://traveler-ai.space",
+                "X-Title": "Traveler AI",
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                model: model,
+                messages: [{ role: "user", content: text }],
+              }),
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              const botText = data.choices?.[0]?.message?.content || "عذراً، لم أستطع الحصول على رد.";
+              appendMessage("bot", botText);
+              success = true;
+              break; // Exit loop on success
+            } else {
+              console.warn(`Model ${model} failed with status ${response.status}`);
+            }
+          } catch (error) {
+            console.error(`Error with model ${model}:`, error);
+          }
+        }
+
+        typingIndicator.style.display = "none";
+        if (!success) {
+          appendMessage("bot", "عذراً، يبدو أن جميع النماذج مشغولة حالياً. يرجى المحاولة بعد دقيقة واحدة.");
+        }
+      }
+    </script>
+  </body>
+</html>
